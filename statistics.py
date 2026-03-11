@@ -1,7 +1,5 @@
 import pandas as pd
 
-from database import load_answers, load_attempts
-
 
 def get_summary_stats(attempts_df: pd.DataFrame, total_questions: int) -> dict:
     if attempts_df.empty:
@@ -25,25 +23,50 @@ def get_summary_stats(attempts_df: pd.DataFrame, total_questions: int) -> dict:
 def get_question_stats(answers_df: pd.DataFrame) -> pd.DataFrame:
     if answers_df.empty:
         return pd.DataFrame(
-            columns=["question_id", "question_text", "total", "correct", "correct_rate", "wrong_rate"]
+            columns=[
+                "question_id",
+                "question_text",
+                "total",
+                "correct",
+                "correct_rate",
+                "wrong_rate",
+            ]
         )
 
     question_stats = (
         answers_df.groupby(["question_id", "question_text"], as_index=False)
-        .agg(total=("is_correct", "count"), correct=("is_correct", "sum"))
+        .agg(
+            total=("is_correct", "count"),
+            correct=("is_correct", "sum"),
+        )
     )
-    question_stats["correct_rate"] = (question_stats["correct"] / question_stats["total"] * 100).round(1)
-    question_stats["wrong_rate"] = (100 - question_stats["correct_rate"]).round(1)
+
+    question_stats["correct_rate"] = (
+        question_stats["correct"] / question_stats["total"] * 100
+    ).round(1)
+
+    question_stats["wrong_rate"] = (
+        100 - question_stats["correct_rate"]
+    ).round(1)
+
     return question_stats.sort_values("question_id")
 
 
 def get_pre_post_compare(attempts_df: pd.DataFrame) -> pd.DataFrame:
+    if attempts_df.empty:
+        return pd.DataFrame(
+            {
+                "구분": ["이용 전", "이용 후"],
+                "평균 점수": [0, 0],
+            }
+        )
+
     pre_mean = attempts_df[attempts_df["quiz_type"] == "pre"]["score"].mean()
     post_mean = attempts_df[attempts_df["quiz_type"] == "post"]["score"].mean()
 
     return pd.DataFrame(
         {
-            "구분": ["학습 전", "학습 후"],
+            "구분": ["이용 전", "이용 후"],
             "평균 점수": [
                 round(pre_mean, 2) if pd.notna(pre_mean) else 0,
                 round(post_mean, 2) if pd.notna(post_mean) else 0,
@@ -54,7 +77,17 @@ def get_pre_post_compare(attempts_df: pd.DataFrame) -> pd.DataFrame:
 
 def get_progress_df(attempts_df: pd.DataFrame) -> pd.DataFrame:
     if attempts_df.empty:
-        return pd.DataFrame()
+        return pd.DataFrame(
+            columns=[
+                "user_code",
+                "first_score",
+                "latest_score",
+                "latest_accuracy",
+                "latest_quiz_type",
+                "submitted_at",
+                "improvement",
+            ]
+        )
 
     first_attempts = (
         attempts_df.sort_values("submitted_at")
@@ -78,4 +111,5 @@ def get_progress_df(attempts_df: pd.DataFrame) -> pd.DataFrame:
 
     progress_df = first_attempts.merge(latest_attempts, on="user_code", how="inner")
     progress_df["improvement"] = progress_df["latest_score"] - progress_df["first_score"]
-    return progress_df
+
+    return progress_df.sort_values("improvement", ascending=False)
