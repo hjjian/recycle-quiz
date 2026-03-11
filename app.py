@@ -171,7 +171,7 @@ with my_result_tab:
 
 
 with admin_tab:
-    st.subheader("관리자 통계")
+    st.markdown("<h4>관리자 통계</h4>", unsafe_allow_html=True)
 
     password = st.text_input("관리자 비밀번호", type="password", key="admin_password_input")
 
