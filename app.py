@@ -47,7 +47,7 @@ questions = load_questions()
 if "last_attempt_id" not in st.session_state:
     st.session_state.last_attempt_id = None
 
-st.title("♻️ 분리수거 퀴즈 시스템")
+st.title("♻️ 분리수거 퀴즈")
 st.caption("개인 코드로 점수와 답안을 저장하고, Google Sheets 기반으로 통계를 확인할 수 있어요.")
 
 quiz_tab, my_result_tab, admin_tab = st.tabs(["퀴즈 풀기", "내 기록 보기", "관리자 통계"])
