@@ -48,18 +48,17 @@ if "last_attempt_id" not in st.session_state:
     st.session_state.last_attempt_id = None
 
 st.title("♻️ 분리수거 퀴즈")
-st.caption("개인 코드로 점수와 답안을 저장하고, Google Sheets 기반으로 통계를 확인할 수 있어요.")
+st.caption("퀴즈 풀고, 분리수거 챗봇을 이용한 후 선물 받아가세요!")
 
 quiz_tab, my_result_tab, admin_tab = st.tabs(["퀴즈 풀기", "내 기록 보기", "관리자 통계"])
 
 
 with quiz_tab:
-    st.subheader("퀴즈 참여")
 
     user_code = st.text_input(
         "개인 코드",
         key="quiz_user_code",
-        placeholder="예: TEAM07, HJ102",
+        placeholder="예: 현정326, 은아717, 현서829",
         help="이름 대신 사용할 코드입니다. 같은 코드를 쓰면 이전 기록과 비교할 수 있어요.",
     ).strip().upper()
 
