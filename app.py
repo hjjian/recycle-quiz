@@ -58,7 +58,7 @@ with quiz_tab:
         "개인 코드",
         key="quiz_user_code",
         placeholder="예: 현정326, 은아717, 현서829",
-        help="이름 대신 사용할 코드입니다. 같은 코드를 쓰면 이전 기록과 비교할 수 있어요.",
+        help="같은 코드를 쓰면 이전 기록과 비교할 수 있어요.",
     ).strip().upper()
 
     quiz_type = st.radio(
