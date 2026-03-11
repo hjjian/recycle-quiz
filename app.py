@@ -133,7 +133,7 @@ with my_result_tab:
     lookup_code = st.text_input(
         "조회할 개인 코드",
         key="lookup_code",
-        placeholder="예: 현정326",
+        placeholder="예: 현정326, 은아717, 현서829",
     ).strip().upper()
 
     if lookup_code:
