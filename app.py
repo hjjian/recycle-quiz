@@ -48,7 +48,10 @@ if "last_attempt_id" not in st.session_state:
     st.session_state.last_attempt_id = None
 
 st.title("♻️ 분리수거 퀴즈")
-st.caption("퀴즈 풀고, 분리수거 챗봇을 이용한 후 선물 받아가세요! \n퀴즈 참여를 통해 수집된 결과는 고려대학교 지속가능원 체인지메이커스 활동에서 환경 인식 개선을 위한 자료로 활용됩니다.")
+st.caption(
+    """퀴즈 풀고, 분리수거 챗봇을 이용한 후 선물 받아가세요!
+    퀴즈 참여를 통해 수집된 결과는 고려대학교 지속가능원 체인지메이커스 활동에서 환경 인식 개선을 위한 자료로 활용됩니다."""
+    )
 
 quiz_tab, my_result_tab, admin_tab = st.tabs(["퀴즈 풀기", "내 기록 보기", "관리자 통계"])
 
