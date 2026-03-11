@@ -221,6 +221,3 @@ with admin_tab:
             file_name="answers.csv",
             mime="text/csv",
         )
-
-st.markdown("---")
-st.caption("문제를 추가하려면 questions.json 파일에 같은 형식으로 문항을 더 넣으면 됩니다.")
