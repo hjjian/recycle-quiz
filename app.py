@@ -57,7 +57,7 @@ with quiz_tab:
     user_code = st.text_input(
         "개인 코드",
         key="quiz_user_code",
-        placeholder="이름+전화번호 뒷자리 (예: 현정1498, 은아6002, 현서8502)",
+        placeholder="이름 + 전화번호 뒷자리 (예: 현정1498, 은아6002, 현서8502)",
         help="같은 코드를 쓰면 이전 기록과 비교할 수 있어요.",
     ).strip().upper()
 
@@ -133,7 +133,7 @@ with my_result_tab:
     lookup_code = st.text_input(
         "조회할 개인 코드",
         key="lookup_code",
-        placeholder="이름+전화번호 뒷자리 (예: 현정1498, 은아6002, 현서8502)",
+        placeholder="이름 + 전화번호 뒷자리 (예: 현정1498, 은아6002, 현서8502)",
     ).strip().upper()
 
     if lookup_code:
