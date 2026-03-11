@@ -20,7 +20,7 @@ from statistics import (
     get_summary_stats,
 )
 
-st.set_page_config(page_title="분리수거 퀴즈", page_icon="♻️", layout="wide")
+st.set_page_config(page_title="분리수거 Quiz", page_icon="♻️", layout="wide")
 
 QUESTION_PATH = "questions.json"
 
