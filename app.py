@@ -129,7 +129,7 @@ with quiz_tab:
 
 
 with my_result_tab:
-    st.subheader("내 기록 조회")
+    st.markdown("<h4>내 기록 조회</h4>", unsafe_allow_html=True)
 
     lookup_code = st.text_input(
         "조회할 개인 코드",
