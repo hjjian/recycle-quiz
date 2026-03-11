@@ -1,60 +1,226 @@
+import json
+from pathlib import Path
+
+import pandas as pd
 import streamlit as st
 
-questions = [
-    {
-        "question": "컵라면 용기는 어떻게 버려야 할까요?",
-        "options": [
-            "플라스틱으로 분리배출",
-            "종이류로 분리배출",
-            "일반쓰레기(종량제 봉투)",
-            "캔류"
-        ],
-        "answer": "일반쓰레기(종량제 봉투)"
-    },
-    {
-        "question": "칫솔은 어떻게 버려야 할까요?",
-        "options": [
-            "플라스틱",
-            "일반쓰레기",
-            "비닐",
-            "캔류"
-        ],
-        "answer": "일반쓰레기"
-    },
-    {
-        "question": "페트병을 버릴 때 올바른 방법은?",
-        "options": [
-            "라벨 제거 후 배출",
-            "그대로 버리기",
-            "종이류로 배출",
-            "캔류로 배출"
-        ],
-        "answer": "라벨 제거 후 배출"
-    }
-]
+from database import (
+    get_answers_for_attempt,
+    get_attempt_history,
+    init_db,
+    read_attempt_by_id,
+    save_attempt,
+)
+from statistics import (
+    get_pre_post_compare,
+    get_progress_df,
+    get_question_stats,
+    get_summary_stats,
+    load_answers,
+    load_attempts,
+)
 
-st.title("♻️ 분리수거 퀴즈")
+st.set_page_config(page_title="분리수거 퀴즈", page_icon="♻️", layout="wide")
 
-score = 0
+QUESTION_PATH = "questions.json"
 
-for i, q in enumerate(questions):
 
-    st.subheader(q["question"])
+def load_questions() -> list:
+    if not Path(QUESTION_PATH).exists():
+        st.error("questions.json 파일이 없습니다.")
+        st.stop()
 
-    user_answer = st.radio(
-        "정답을 선택하세요",
-        q["options"],
-        key=i
+    with open(QUESTION_PATH, "r", encoding="utf-8") as f:
+        return json.load(f)
+
+
+def reset_quiz_state() -> None:
+    for key in list(st.session_state.keys()):
+        if key.startswith("answer_"):
+            del st.session_state[key]
+    st.session_state.last_attempt_id = None
+
+
+init_db()
+questions = load_questions()
+
+if "last_attempt_id" not in st.session_state:
+    st.session_state.last_attempt_id = None
+
+st.title("♻️ 분리수거 퀴즈 시스템")
+st.caption("개인 코드로 점수와 답안을 저장하고, Google Sheets 기반으로 통계를 확인할 수 있어요.")
+
+quiz_tab, my_result_tab, admin_tab = st.tabs(["퀴즈 풀기", "내 기록 보기", "관리자 통계"])
+
+
+with quiz_tab:
+    st.subheader("퀴즈 참여")
+
+    user_code = st.text_input(
+        "개인 코드",
+        key="quiz_user_code",
+        placeholder="예: TEAM07, HJ102",
+        help="이름 대신 사용할 코드입니다. 같은 코드를 쓰면 이전 기록과 비교할 수 있어요.",
+    ).strip().upper()
+
+    quiz_type = st.radio(
+        "응시 유형",
+        options=["pre", "post"],
+        format_func=lambda x: "학습 전 (pre)" if x == "pre" else "학습 후 (post)",
+        horizontal=True,
     )
 
-    if user_answer == q["answer"]:
-        score += 1
-
-if st.button("결과 보기"):
-
-    st.write(f"점수: {score} / {len(questions)}")
-
-    if score == len(questions):
-        st.success("완벽합니다! 🎉")
+    if not user_code:
+        st.info("개인 코드를 입력하면 퀴즈를 시작할 수 있어요.")
     else:
-        st.info("틀린 문제를 다시 확인해보세요.")
+        with st.form("quiz_form"):
+            collected_answers = {}
+            for q in questions:
+                st.markdown(f"### {q['id']}. {q['question']}")
+                collected_answers[str(q['id'])] = st.radio(
+                    "답을 선택하세요",
+                    options=q["options"],
+                    key=f"answer_{q['id']}",
+                    index=None,
+                )
+
+            submitted = st.form_submit_button("제출하고 저장하기")
+
+        if submitted:
+            attempt_id = save_attempt(user_code, quiz_type, questions, collected_answers)
+            st.session_state.last_attempt_id = attempt_id
+            st.success("제출이 완료되었어요. 점수와 답안이 저장되었습니다.")
+
+        if st.session_state.last_attempt_id is not None:
+            latest_answers = get_answers_for_attempt(st.session_state.last_attempt_id)
+            latest_attempt = read_attempt_by_id(st.session_state.last_attempt_id)
+
+            if not latest_attempt.empty:
+                row = latest_attempt.iloc[0]
+
+                st.markdown("## 이번 결과")
+                c1, c2, c3 = st.columns(3)
+                c1.metric("점수", f"{int(row['score'])}/{int(row['total'])}")
+                c2.metric("정답률", f"{float(row['accuracy']):.1f}%")
+                c3.metric("응시 유형", "학습 전" if row["quiz_type"] == "pre" else "학습 후")
+                st.caption(f"제출 시각: {row['submitted_at']}")
+
+                st.markdown("### 문항별 피드백")
+                for q in questions:
+                    matched = latest_answers[latest_answers["question_id"] == q["id"]]
+                    if matched.empty:
+                        continue
+
+                    answer_row = matched.iloc[0]
+                    st.markdown(f"**{q['id']}. {q['question']}**")
+                    st.write(f"- 내 답: {answer_row['user_answer'] if pd.notna(answer_row['user_answer']) and answer_row['user_answer'] != '' else '미응답'}")
+                    st.write(f"- 정답: {answer_row['correct_answer']}")
+                    if int(answer_row["is_correct"]) == 1:
+                        st.success("정답")
+                    else:
+                        st.error("오답")
+                    st.write(f"- 해설: {q['explanation']}")
+                    st.write("")
+
+                if st.button("다시 풀기"):
+                    reset_quiz_state()
+                    st.rerun()
+
+
+with my_result_tab:
+    st.subheader("내 기록 조회")
+
+    lookup_code = st.text_input(
+        "조회할 개인 코드",
+        key="lookup_code",
+        placeholder="예: TEAM07",
+    ).strip().upper()
+
+    if lookup_code:
+        history = get_attempt_history(lookup_code)
+
+        if history.empty:
+            st.warning("해당 코드의 기록이 아직 없습니다.")
+        else:
+            st.dataframe(history, use_container_width=True)
+
+            total = int(history.iloc[-1]["total"])
+            first_score = int(history.iloc[0]["score"])
+            latest_score = int(history.iloc[-1]["score"])
+            best_score = int(history["score"].max())
+
+            c1, c2, c3 = st.columns(3)
+            c1.metric("첫 점수", f"{first_score}/{total}")
+            c2.metric("최근 점수", f"{latest_score}/{total}")
+            c3.metric("최고 점수", f"{best_score}/{total}")
+
+            if len(history) >= 2:
+                st.metric("처음 대비 변화", f"{latest_score - first_score:+d}점")
+
+            st.markdown("### 학습 전 / 후 비교")
+            pre_df = history[history["quiz_type"] == "pre"]
+            post_df = history[history["quiz_type"] == "post"]
+
+            if not pre_df.empty and not post_df.empty:
+                latest_pre = int(pre_df.iloc[-1]["score"])
+                latest_post = int(post_df.iloc[-1]["score"])
+                st.success(f"학습 전 {latest_pre}점 → 학습 후 {latest_post}점 ({latest_post - latest_pre:+d}점)")
+            else:
+                st.info("학습 전(pre)과 학습 후(post) 기록이 모두 있어야 비교할 수 있어요.")
+
+
+with admin_tab:
+    st.subheader("관리자 통계")
+
+    attempts_df = load_attempts()
+    answers_df = load_answers()
+
+    if attempts_df.empty:
+        st.info("아직 수집된 데이터가 없습니다.")
+    else:
+        summary = get_summary_stats(attempts_df, len(questions))
+
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("총 참여자 수", f"{summary['participants']}명")
+        c2.metric("총 응시 횟수", f"{summary['attempts']}회")
+        c3.metric("평균 점수", f"{summary['avg_score']}/{summary['total_questions']}")
+        c4.metric("평균 정답률", f"{summary['avg_accuracy']}%")
+
+        st.markdown("### 문제별 정답률 / 오답률")
+        question_stats = get_question_stats(answers_df)
+        st.dataframe(question_stats, use_container_width=True)
+        if not question_stats.empty:
+            st.bar_chart(question_stats.set_index("question_text")["wrong_rate"])
+
+        st.markdown("### 가장 많이 틀린 문제 TOP 5")
+        top_wrong = question_stats.sort_values("wrong_rate", ascending=False).head(5)
+        st.dataframe(top_wrong[["question_id", "question_text", "wrong_rate"]], use_container_width=True)
+
+        st.markdown("### 학습 전 / 학습 후 평균 비교")
+        compare_df = get_pre_post_compare(attempts_df)
+        st.dataframe(compare_df, use_container_width=True)
+        st.bar_chart(compare_df.set_index("구분"))
+
+        st.markdown("### 개인별 최근 기록과 향상도")
+        progress_df = get_progress_df(attempts_df)
+        st.dataframe(progress_df, use_container_width=True)
+
+        st.markdown("### 데이터 다운로드")
+        attempts_csv = attempts_df.to_csv(index=False).encode("utf-8-sig")
+        answers_csv = answers_df.to_csv(index=False).encode("utf-8-sig")
+
+        st.download_button(
+            "attempts.csv 다운로드",
+            attempts_csv,
+            file_name="attempts.csv",
+            mime="text/csv",
+        )
+        st.download_button(
+            "answers.csv 다운로드",
+            answers_csv,
+            file_name="answers.csv",
+            mime="text/csv",
+        )
+
+st.markdown("---")
+st.caption("문제를 추가하려면 questions.json 파일에 같은 형식으로 문항을 더 넣으면 됩니다.")
