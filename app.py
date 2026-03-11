@@ -65,7 +65,7 @@ with quiz_tab:
     quiz_type = st.radio(
         "응시 유형",
         options=["pre", "post"],
-        format_func=lambda x: "학습 전 (pre)" if x == "pre" else "학습 후 (post)",
+        format_func=lambda x: "이용 전 (pre)" if x == "pre" else "이용 후 (post)",
         horizontal=True,
     )
 
