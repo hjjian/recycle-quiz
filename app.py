@@ -47,7 +47,7 @@ questions = load_questions()
 if "last_attempt_id" not in st.session_state:
     st.session_state.last_attempt_id = None
 
-st.title("♻️ 분리수거 퀴즈")
+st.markdown("<h2>♻️ 분리수거 퀴즈</h2>", unsafe_allow_html=True)
 st.caption("퀴즈 풀고, 분리수거 챗봇을 이용한 후 선물 받아가세요!")
 st.caption("퀴즈 참여를 통해 수집된 결과는 고려대학교 지속가능원 체인지메이커스 활동에서 환경 인식 개선을 위한 자료로 활용될 예정입니다.")
 
