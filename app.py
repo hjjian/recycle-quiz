@@ -8,6 +8,8 @@ from database import (
     get_answers_for_attempt,
     get_attempt_history,
     init_db,
+    load_answers,
+    load_attempts,
     read_attempt_by_id,
     save_attempt,
 )
@@ -16,8 +18,6 @@ from statistics import (
     get_progress_df,
     get_question_stats,
     get_summary_stats,
-    load_answers,
-    load_attempts,
 )
 
 st.set_page_config(page_title="분리수거 퀴즈", page_icon="♻️", layout="wide")
